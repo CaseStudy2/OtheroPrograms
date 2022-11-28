@@ -88,10 +88,10 @@ class Field{
     return null;                                //見つからん時ヌルヌルをペペローション
   }
 
-  // public void putKoma(int x, int y, String state){//指定の場所に置くだけ
-  //   Koma koma = this.getKoma(x,y);              //指定座標のkomaオブジェクトを入手
-  //   koma.setState(state);                       //手に入れたオブジェクトのステータス変更
-  // }
+  public void putKoma(int x, int y, String state){//指定の場所に置くだけ
+    Koma koma = this.getKoma(x,y);              //指定座標のkomaオブジェクトを入手
+    koma.setState(state);                       //手に入れたオブジェクトのステータス変更
+  }
 
   public void feature(){
     System.out.println("print");
@@ -116,11 +116,11 @@ class Field{
   }
 
   public void turnKoma(int x, int y, String state){//ある方向を見て、敵の色だった場合、自分の色が来るまでオブジェクトを入手し、リストに格納する。
-    String enemyState = state.equals("B") ? "W" : "B" ;                 //enemyStateに敵の色を代入代入
+    String enemyState = state.equals("B") ? "W" : "B" ;                 //enemyStateに敵の色を代入
     for(int i = 0; i < 3; i++){
      for(int j = 0; j < 3; j++){
         if(j==1 && i==1)continue;                                                 //この座標は置いた場所だから処理はスキップ
-        if(x-1+j < 0 || y-1+i < 0)continue;                                       //盤面外に行く場合、その方向の処理をスキップ
+        if(x-1+j < 0 || y-1+i < 0 || x-1+j > 7 || y-1+i > 7)continue;             //盤面外に行く場合、その方向の処理をスキップ
         Koma koma = this.getKoma(x-1+j,y-1+i);                                    //j-1、i+1にすることで、２重ループのi,jで、北西、北、北東、西、東、南西、南、南東の順に座標を参照していく
 
         if(koma.getState().equals(enemyState)){                                   //そのコマが敵の色の場合
@@ -141,7 +141,6 @@ class Field{
             this.komalist.set(this.komalist.indexOf(tempkoma), koma);             //tempkomaオブジェクトに該当するオブジェクトindexOfでkomalistからindexf()で検索し、一行前にステータスを変更したkomaオブジェクトにset()で入れ替える
           }
           this.komaturnlist.clear();
-          break;
         }
       }
     }
