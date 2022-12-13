@@ -6,28 +6,35 @@ import java.util.Scanner;
 public class Othero{
   public static void main(String[] args){       
     Scanner sc = new Scanner(System.in);
-    Field field = new Field(8,8);
     int x,y;
     String state;
+
+    System.out.print("オセロを始めます。");
+    System.out.print("先行(AI : me):");
+    state = sc.next().equals("me") ? "B" : "W";
+    Field.AIState = state.equals("B") ? "W" : "B" ;
+    
+    Field field = new Field(8,8);
+
     field.prepare();
     field.putKoma(3,3,"W");
     field.putKoma(3,4,"B");
     field.putKoma(4,3,"B");
     field.putKoma(4,4,"W");
-    System.out.print("オセロを始めます。");
     do{
       field.feature();
       System.out.println("置く場所：(x,y,state)");
       try{
         x = sc.nextInt();
         y = sc.nextInt();
-        state = sc.next();
         field.turnKoma(x, y, state);
       }catch(InputMismatchException e){
         System.out.println("オセロ終了");
         break;
       }
+      field.AIputKoma();
     }while(true);
+    sc.close();
   }
 }
 
@@ -61,6 +68,7 @@ class Field{
   private List<Koma> komaturnlist;       //ひっくり返すコマのオブジェクトを格納するリスト
   private int ynum = 0;
   private int xnum = 0;
+  static String AIState;
 
   public Field(int xnum, int ynum){             //コンストラクタで盤面(x*y)を決定
     this.xnum = xnum;
@@ -78,10 +86,10 @@ class Field{
     }
   }
 
-  public Koma getKoma(int y, int x){            //オブジェクトをリターン
+  public Koma getKoma(int x, int y){            //オブジェクトをリターン
     for(Koma koma : this.komalist){             //komalistに対して、盤面の全てのオブジェクトにアクセスする拡張for文
       int[]pos = koma.getPosition();            //komaオブジェクトから座標情報を入手
-      if(pos[0]==y && pos[1]==x){               //検索対象のオブジェクトが見つかれば、そのkomaオブジェクトをリターン
+      if(pos[0]==x && pos[1]==y){               //検索対象のオブジェクトが見つかれば、そのkomaオブジェクトをリターン
         return koma;
       }
     }
@@ -94,7 +102,6 @@ class Field{
   }
 
   public void feature(){
-    System.out.println("print");
     String [][] board = new String[ynum][xnum]; //二次元配列を定義：名前は"board"
     for(Koma koma : this.komalist){             //komalistを拡張for文で全て参照
       int[] pos = koma.getPosition();           //pos配列に座標情報を代入
@@ -109,14 +116,21 @@ class Field{
         String b = board[y][x];
         if(b.equals("W"))System.out.print("●\t");
         else if(b.equals("B"))System.out.print("○\t");
-        else System.out.print(b+"\t");
+        else if(b.equals("C"))System.out.print("C\t");
+        else System.out.print("*\t");
       }
       System.out.println("\n");
     }
   }
 
   public void turnKoma(int x, int y, String state){//ある方向を見て、敵の色だった場合、自分の色が来るまでオブジェクトを入手し、リストに格納する。
-    String enemyState = state.equals("B") ? "W" : "B" ;                 //enemyStateに敵の色を代入
+    String enemyState;
+    boolean putC = false;
+    if(state.equals("E")){
+      putC = true;
+      state = AIState;
+      enemyState = AIState.equals("B") ? "W" : "B" ;                //stateがEならAI側の敵のステータス入手
+    }else enemyState = state.equals("B") ? "W" : "B" ;                   //stateがEでないならenemyStateに敵の色を代入
     for(int i = 0; i < 3; i++){
      for(int j = 0; j < 3; j++){
         if(j==1 && i==1)continue;                                                 //この座標は置いた場所だから処理はスキップ
@@ -127,22 +141,55 @@ class Field{
           this.komaturnlist.add(this.getKoma(x,y));                               //置いたkomaも忘れずにkomaturnlistに追加
           
           for(int k = 1; k <= 8 && !(koma.getState().equals(state)); k++){        //komaのステータスが味方の色でない時for文で回す。最大7回まで。つまり8回目は絶対盤面外行く。
-            if(x+(j-1)*k < 0 || y+(i-1)*k < 0 || x+(j-1)*k > 7 || y+(i-1)*k > 7 || koma.getState().equals("E")){//盤面外に行ったかどうか、もしくはEmptyマスに入ったか
+            if(x+(j-1)*k < 0 || y+(i-1)*k < 0 || x+(j-1)*k > 7 || y+(i-1)*k > 7 || koma.getState().equals("E") || koma.getState().equals("C")){//盤面外に行ったかどうか、もしくはEmptyマスに入ったか(C)
               this.komaturnlist.clear();                                          //komaturnlistをクリア、下の拡張for文も実行されない。
               break;
             }
-            koma = this.getKoma(x+(j-1)*k, y+(i-1)*k);                               //続くkomaをどんどん参照
+            koma = this.getKoma(x+(j-1)*k, y+(i-1)*k);                            //続くkomaをどんどん参照
+            if(putC)continue;                                                     //Cを置くときリストを追加していく必要はないから、下の処理は飛ばす
             this.komaturnlist.add(koma);                                          //ひっくり返すkomaオブジェクトを格納しておくkomaturnlistに仮入れ
           }
 
           for(Koma tempkoma : this.komaturnlist){                                 //komaturnlistを全参照して、tempkomaオブジェクトに入れる
             koma = tempkoma;                                                      //komaオブジェクトにtempkomaオブジェクトを入れておいて、
-            koma.setState(state);                                                 //komaオブジェクトの色を変更して、
+            if(putC)koma.setState("C");                                     //Cを入れる場合
+            else koma.setState(state);                                            //komaオブジェクトの色を変更して、
             this.komalist.set(this.komalist.indexOf(tempkoma), koma);             //tempkomaオブジェクトに該当するオブジェクトindexOfでkomalistからindexf()で検索し、一行前にステータスを変更したkomaオブジェクトにset()で入れ替える
           }
           this.komaturnlist.clear();
         }
       }
+    }
+  }
+
+  public void AIputKoma(){
+    putC();
+    for(Koma koma : this.komalist ){
+      if(koma.getState().equals("C")){
+        int[] pos = koma.getPosition();
+        int x = pos[0];
+        int y = pos[1];
+        turnKoma(x,y,AIState);
+        break;
+      }
+    }
+    deleteC();
+  }
+
+  public void putC(){
+    for(Koma koma : this.komalist){
+      if(koma.getState().equals("C"))koma.setState("E");                         //元Cで合ったところも現在そうでは無くなってる時があるため、Eにリセットする
+      if(!koma.getState().equals("E"))continue;                                         //komaのステータス"E"以外ならスキップ
+      int[] pos = koma.getPosition();
+      int x = pos[0];
+      int y = pos[1];
+      turnKoma(x,y,"E");
+    }
+  }
+
+  public void deleteC(){                                                                           //komalistからCを消すだけ。見栄え用
+    for(Koma koma : this.komalist){
+      if(koma.getState().equals("C"))koma.setState("E");
     }
   }
 }
